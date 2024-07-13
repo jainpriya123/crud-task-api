@@ -4,6 +4,8 @@ const cors = require('cors');
 const mongoose = require('./database/mongoose');
 const TaskList = require('./database/models/taskList');
 const Task = require('./database/models/task');
+const taskRoute= require('./routes/task');
+
 const port = 3000;
 
 
@@ -46,7 +48,7 @@ app.post('/tasklists',(req,res)=>{
 //Endpoint to get one taskList by taskListId: url/tasklists/:id
 app.get('/tasklists/:tasklistId', (req,res)=>{
     let tasklistId = req.params.tasklistId;   //params->/ -> id part
-    TaskList.find({_id:tasklistId})
+    TaskList.findOne({_id:tasklistId})
     .then((taskList)=>{
         res.status(200).send(taskList)
     })
@@ -55,7 +57,7 @@ app.get('/tasklists/:tasklistId', (req,res)=>{
 
 
 //Endpoint to update taskList by taskListId: url/taskLists/:id
-app.put('/tasklists/:tasklistId', (req,res)=>{
+app.patch('/tasklists/:tasklistId', (req,res)=>{
     TaskList.findByIdAndUpdate({_id: req.params.tasklistId},{$set: req.body}, { new: true })
     .then((taskList)=>{
         res.status(200).send(taskList)
@@ -64,15 +66,27 @@ app.put('/tasklists/:tasklistId', (req,res)=>{
 });
 
 
-//Endpoint to delete a tasklist by taskListId
-app.delete('/tasklists/:tasklistId', (req,res)=>{
-    TaskList.findByIdAndDelete({_id: req.params.tasklistId})
-    .then((taskList)=>{
-        res.status(200).send(taskList)
+app.delete('/tasklists/:tasklistId',(req,res)=>{
+    // let ListId = req.params.tasklistId;
+
+    const deleteAllContainingTask = (taskList)=>{
+        console.log("hiiiii");
+        Task.deleteMany({_tasklistId: req.params.tasklistId})
+        .then(()=> {return taskList})
+        .catch((error)=>{console.log(error)});
+    }
+
+    // Task.deleteMany({_tasklistId: ListId});
+const resp= TaskList.findByIdAndDelete(req.params.tasklistId)
+    .then((taskLists)=>{
+        deleteAllContainingTask(taskLists);
     })
-    .catch((error)=> {console.log(error)});
+    .catch((error)=>{console.log((error))});
+res.status(200).send(resp);
 });
 
+//Use Task.js endpoints API from routes.
+app.use('/tasklists/', taskRoute);
 
 app.get('/', (req, res) => res.send('Hello World!'))
 app.listen(port, () => console.log(`Server started on port ${port}!`));
